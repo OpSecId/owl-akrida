@@ -1,18 +1,19 @@
 from .base import BaseIssuer
-import json
-import os
 import requests
 import time
-from .models import IssueCredentialV1, CredentialProposalV1, AnonCredsRevocation
+from models import IssueCredentialV1, CredentialProposalV1, AnonCredsRevocation
+from settings import Settings
 
 class AcapyIssuer(BaseIssuer):
         def __init__(self):
-                self.agent_url = os.getenv("ISSUER_URL")
-                self.headers = json.loads(os.getenv("ISSUER_HEADERS"))
-                self.headers['Content-Type'] = "application/json"
-                self.cred_def_id = os.getenv("CRED_DEF")
-                self.schema_id = os.getenv("SCHEMA")
-                self.cred_attributes = json.loads(os.getenv("CRED_ATTR"))
+                self.label = "Test Issuer"
+                self.agent_url = Settings.ISSUER_URL
+                self.headers = Settings.ISSUER_HEADERS | {
+                        'Content-Type': 'application/json'
+                }
+                self.schema_id = Settings.SCHEMA_ID
+                self.cred_def_id = Settings.CRED_DEF_ID
+                self.cred_attributes = Settings.CRED_ATTR
         
         def get_invite(self, out_of_band=False):
                 if out_of_band:
@@ -21,7 +22,6 @@ class AcapyIssuer(BaseIssuer):
                         r = requests.post(
                                 f"{self.agent_url}/out-of-band/create-invitation?auto_accept=true", 
                                 json={
-                                "metadata": {}, 
                                 "handshake_protocols": ["https://didcomm.org/connections/1.0"]
                                 },
                                 headers=self.headers
@@ -30,7 +30,7 @@ class AcapyIssuer(BaseIssuer):
                         # Regular Connection
                         r = requests.post(
                                 f"{self.agent_url}/connections/create-invitation?auto_accept=true",
-                                json={"metadata": {}, "my_label": "Test"},
+                                json={"my_label": self.label},
                                 headers=self.headers,
                         )
 
@@ -65,7 +65,6 @@ class AcapyIssuer(BaseIssuer):
                 try:
                         r = requests.get(
                                 f"{self.agent_url}/status",
-                                json={"metadata": {}, "my_label": "Test"},
                                 headers=self.headers,
                         )
                         if r.status_code != 200:
