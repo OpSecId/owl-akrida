@@ -3,19 +3,20 @@ import json
 import os
 import requests
 import time
-from .models import RequestPresentationV1, ProofRequest
+from models import RequestPresentationV1, ProofRequest
 from settings import Settings
 
 from json.decoder import JSONDecodeError
 
 class AcapyVerifier(BaseVerifier):
         def __init__(self):
-                self.agent_url = os.getenv("VERIFIER_URL")
-                self.headers = json.loads(os.getenv("VERIFIER_HEADERS"))
-                self.headers['Content-Type'] = "application/json"
+                self.label = "Test Verifier"
+                self.agent_url = Settings.VERIFIER_URL
+                self.headers = Settings.VERIFIER_HEADERS | {
+                        'Content-Type': 'application/json'
+                }
         
-                self.cred_attributes = json.loads(os.getenv("CRED_ATTR"))
-                
+                self.cred_attributes = Settings.CRED_ATTR
                 self.verifiedTimeoutSeconds = Settings.VERIFIED_TIMEOUT_SECONDS
 
         def get_invite(self, out_of_band=False):
@@ -25,7 +26,6 @@ class AcapyVerifier(BaseVerifier):
                         r = requests.post(
                                 f"{self.agent_url}/out-of-band/create-invitation?auto_accept=true", 
                                 json={
-                                "metadata": {}, 
                                 "handshake_protocols": ["https://didcomm.org/connections/1.0"]
                                 },
                                 headers=self.headers
@@ -34,7 +34,7 @@ class AcapyVerifier(BaseVerifier):
                         # Regular Connection
                         r = requests.post(
                                 f"{self.agent_url}/connections/create-invitation?auto_accept=true",
-                                json={"metadata": {}, "my_label": "Test"},
+                                json={"my_label": self.label},
                                 headers=self.headers,
                         )
 
@@ -42,7 +42,7 @@ class AcapyVerifier(BaseVerifier):
                         try:
                                 r.json()["invitation_url"]
                         except Exception:
-                                raise Exception("Failed to get invitation url. Request: ", r.json())
+                                raise Exception("Failed to get invitation url. Request: ", r.text)
                         if r.status_code != 200:
                                 raise Exception(r.content)
 
@@ -69,7 +69,6 @@ class AcapyVerifier(BaseVerifier):
                 try:
                         r = requests.get(
                                 f"{self.agent_url}/status",
-                                json={"metadata": {}, "my_label": "Test"},
                                 headers=self.headers,
                         )
                         if r.status_code != 200:
