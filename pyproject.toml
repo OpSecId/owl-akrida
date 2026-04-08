@@ -1,0 +1,14 @@
+[project]
+name = "owl-akrida"
+version = "1.0.0"
+description = "Load testing tool for Aries agents"
+requires-python = ">=3.10"
+dependencies = [
+    "locust==2.42.2",
+    "python-dotenv",
+    "pydantic",
+]
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
