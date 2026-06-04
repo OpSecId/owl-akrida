@@ -26,7 +26,13 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
 # Python / Locust
 RUN pip3 install --upgrade pip
-RUN pip3 install locust==2.42.2 python-dotenv pydantic
+RUN pip3 install pdm
+
+# Copy Python dependency files to root
+WORKDIR /
+COPY pyproject.toml ./
+COPY pdm.lock ./
+RUN pdm sync --no-self
 
 # App code
 WORKDIR ${LOADDIR}
