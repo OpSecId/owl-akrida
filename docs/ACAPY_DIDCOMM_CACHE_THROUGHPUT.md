@@ -64,6 +64,23 @@ About **~1.2×** on the full receive pipeline; hot unpack is ~66× faster than c
 
 ---
 
+## Security considerations
+
+The fast path does **not** weaken the DIDComm v1 envelope: every message still gets a fresh CEK, nonce, and AEAD. Holders see the same wire format as stock ACA-Py.
+
+What changes is **where send/unpack material lives between messages**. The cache holds per-connection crypto state (including a sender key handle used for packing, and the X25519 material used for authcrypt unpack). That is a deliberate performance tradeoff — secret material stays reachable in process memory longer than a pure per-send Askar fetch.
+
+Mitigations measured in the full report:
+
+- **Active TTL** (default **30 s**) plus background eviction (~1 s) so idle entries — and their key handles — drain after traffic stops. TTL sweeps down to **10 s** showed no meaningful throughput regression, so operators can tighten retention if required.
+- **Tenant-scoped keys** `(local_tenant_wallet_id, connection_id)` so multitenant wallets do not share cache entries across subwallets.
+- **LRU cap** (`FASTPATH_CACHE_MAX`, default 8192) to bound memory and stale entries under many connections.
+- **Wallet-removal / invalidation hooks** so deleted wallets drop their cache entries.
+
+On the inbound path (when enabled), a cache hit still requires the exact `(wallet_id, recipient verkey)` index entry; authcrypt sender verification still runs; the `ConnRecord` shortcut is only taken for authcrypt (not anoncrypt). Inbound integration uses a supported wire-format binding plus a version-sensitive override of connection lookup — re-verify (or disable inbound fast path) when upgrading ACA-Py.
+
+---
+
 ## Takeaways
 
 1. Stock ACA-Py’s basic-message send ceiling is **pipeline overhead**, not crypto or Postgres.
