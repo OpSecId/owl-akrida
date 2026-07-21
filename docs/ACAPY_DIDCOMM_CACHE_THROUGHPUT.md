@@ -25,7 +25,7 @@ Later sends: build JSON → pack in a thread pool → HTTP POST on a keep-alive 
 
 ## Gain from the DIDComm memory cache
 
-### Against real Credo holders
+### Against real holders
 
 | Path | Steady msg/s | Issuer CPU (mean) |
 |---|---:|---:|
@@ -47,7 +47,7 @@ Packing still uses real connection keys; the sink returns `200` without unpackin
 | 40 | 227.1 |
 | 60 | **241.9** |
 
-One ACA-Py process with the DIDComm memory cache reaches **~220–242 msg/s** at under one core — well above a cited ~170 msg/s Credo figure for a single agent.
+One ACA-Py process with the DIDComm memory cache reaches **~220–242 msg/s** at under one core.
 
 ### Inbound (same shared cache)
 
@@ -76,7 +76,7 @@ To limit how long cached sender key handles stay reachable, the memory cache use
 | LRU max entries | **8192** | Bound by peak concurrent *active* connections, not lifetime total |
 | Invalidation | wallet-removal hook | Drops all entries for a deleted wallet |
 
-### TTL sweep (real-Credo admin path, 10k messages, 20 connections)
+### TTL sweep (real-holder admin path, 10k messages, 20 connections)
 
 | TTL | Steady msg/s | Cold resolves | p50 / p95 latency |
 |---:|---:|---:|---:|
@@ -93,7 +93,7 @@ After tenant-scoped keys, active TTL, LRU bounds, key-handle disposal, and the w
 
 | Path | Steady msg/s | Failures | Cache signal |
 |---|---:|---:|---|
-| Cached e2e (real Credo, 20 conns) | **102.3** | 0 | `evictions_lru=0`; TTL expirations on idle |
+| Cached e2e (real holders, 20 conns) | **102.3** | 0 | `evictions_lru=0`; TTL expirations on idle |
 | Cached mock sink (20 conns) | **227.3** | 0 | Cache drained to 0 entries after idle via active sweep |
 
 `cache_entries` stayed at 20 (≪ 8192, so LRU never fired). After traffic stopped, the background sweeper reclaimed every idle entry and its sender key material within the 30 s TTL.
@@ -111,7 +111,7 @@ To check whether the per-process ceiling is additive, the cached mock-sink workl
 | 3 | 60 | 243.4 | 81.1 | 1.31× |
 
 - **Shared-wallet + sticky routing works.** Sends split evenly across replicas (N=2 ≈ 5019 / 4981; N=3 ≈ 3349 / 3321 / 3330) and every message landed at the mock sink (0 failures).
-- **Aggregate peaks ~250 msg/s on this host, then plateaus.** Locust warned about CPU above 90% at N=2 and N=3 — the load generator (and Credo agents used for connection setup) saturated the 12-core box. Mean per-send latency on each issuer actually *dropped* at N=3 (≈19 ms vs ≈28 ms at N=1), so the issuers were under-loaded; the **host** was the limiter, not Postgres.
+- **Aggregate peaks ~250 msg/s on this host, then plateaus.** Locust warned about CPU above 90% at N=2 and N=3 — the load generator (and holder agents used for connection setup) saturated the 12-core box. Mean per-send latency on each issuer actually *dropped* at N=3 (≈19 ms vs ≈28 ms at N=1), so the issuers were under-loaded; the **host** was the limiter, not Postgres.
 - **What this proves on one box:** multi-replica shared-wallet send is correct and adds capacity until the host is full. It does **not** prove linear N× scaling — that needs the load generator (and ideally the replicas) on separate hosts.
 
 ---
