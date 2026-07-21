@@ -100,6 +100,22 @@ After tenant-scoped keys, active TTL, LRU bounds, key-handle disposal, and the w
 
 ---
 
+## Multi-replica scaling (shared Postgres, mock sink)
+
+To check whether the per-process ceiling is additive, the cached mock-sink workload was run across **N = 1, 2, 3 issuer replicas** sharing one Askar Postgres wallet. Each Locust user is sticky to one replica (setup and sends stay on the same process); each replica has its own DIDComm inbound endpoint and its own **per-process** DIDComm memory cache. Offered load: **20 Locust users per replica**.
+
+| Replicas | Users | Aggregate msg/s | Per-replica msg/s | vs 1× |
+|---:|---:|---:|---:|---:|
+| 1 | 20 | **185.3** | 185.3 | 1.00× |
+| 2 | 40 | **250.7** | 125.4 | 1.35× |
+| 3 | 60 | 243.4 | 81.1 | 1.31× |
+
+- **Shared-wallet + sticky routing works.** Sends split evenly across replicas (N=2 ≈ 5019 / 4981; N=3 ≈ 3349 / 3321 / 3330) and every message landed at the mock sink (0 failures).
+- **Aggregate peaks ~250 msg/s on this host, then plateaus.** Locust warned about CPU above 90% at N=2 and N=3 — the load generator (and Credo agents used for connection setup) saturated the 12-core box. Mean per-send latency on each issuer actually *dropped* at N=3 (≈19 ms vs ≈28 ms at N=1), so the issuers were under-loaded; the **host** was the limiter, not Postgres.
+- **What this proves on one box:** multi-replica shared-wallet send is correct and adds capacity until the host is full. It does **not** prove linear N× scaling — that needs the load generator (and ideally the replicas) on separate hosts.
+
+---
+
 ## Security considerations
 
 The DIDComm memory cache does **not** weaken the DIDComm v1 envelope: every message still gets a fresh CEK, nonce, and AEAD. Holders see the same wire format as stock ACA-Py.
@@ -116,4 +132,4 @@ On the inbound path (when enabled), a cache hit still requires the exact `(walle
 2. A DIDComm memory cache of per-connection send material gives **~1.35–1.5×** send throughput against real holders and **~3×** vs stock when the recipient is cheap (~70 → ~242 msg/s).
 3. The same cache can lift inbound handling **~1.2×** when enabled.
 4. Active TTL (default 30 s) and LRU (default 8192 entries) do not cost measurable throughput; tighten TTL freely if a shorter secret-retention window is required.
-5. Treat **~200–240 msg/s per process** (with the cache) as a working single-process budget; scale horizontally for more.
+5. Treat **~200–240 msg/s per process** (with the cache) as a working single-process budget; scale horizontally behind shared Postgres. On one host, aggregate throughput plateaus once the load generator fills the cores (~250 msg/s here) — true N× needs separate hosts.
