@@ -5,7 +5,7 @@
 **Host:** 12 vCPU / ~16 GB RAM (Docker on WSL2)  
 **Author:** Patrick St-Louis  
 
-Full investigation (isolation matrix, TTL/LRU hardening, Kanon, multi-replica scaling, inbound appendix): see DigiCred’s [`ACAPY_THROUGHPUT_REPORT.md`](https://github.com/DigiCred-Holdings/owl-akrida/blob/benchmark/basic-msg-10k/docs/ACAPY_THROUGHPUT_REPORT.md) on `benchmark/basic-msg-10k`.
+Full investigation (isolation matrix, TTL/LRU hardening, multi-replica scaling, inbound appendix): see DigiCred’s [`ACAPY_THROUGHPUT_REPORT.md`](https://github.com/DigiCred-Holdings/owl-akrida/blob/benchmark/basic-msg-10k/docs/ACAPY_THROUGHPUT_REPORT.md) on `benchmark/basic-msg-10k`.
 
 ---
 
